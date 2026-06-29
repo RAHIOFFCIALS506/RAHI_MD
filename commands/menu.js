@@ -44,6 +44,18 @@ export default {
 
 > Type ${prefix}help <command> for details`
 
-        await sock.sendMessage(m.key.remoteJid, { text }, { quoted: m })
+        await sock.sendMessage(m.key.remoteJid, { 
+            text: text,
+            contextInfo: {
+                externalAdReply: {
+                    title: "𝑹𝑨𝑯𝑰_𝑴𝑫 Control Center",
+                    body: "Professional WhatsApp Bot",
+                    thumbnailUrl: "https://i.postimg.cc/05p6KqCc/1768548671157.jpg",
+                    sourceUrl: "https://github.com/RAHIOFFCIALS506/RAHI_MD",
+                    mediaType: 1,
+                    renderLargerThumbnail: true
+                }
+            }
+        }, { quoted: m })
     }
 }
