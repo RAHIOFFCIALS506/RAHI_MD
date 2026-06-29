@@ -1,14 +1,14 @@
 {
   "bot": {
-    "name": "ALx-MD",
+    "name": "𝑹𝑨𝑯𝑰_𝑴𝑫",
     "version": "2.0.0",
-    "prefix": "/",
+    "prefix": ".",
     "auth": "pr",
     "privateMode": true
   },
   "owner": {
-    "number": "919876543210",
-    "name": "DebaTej"
+    "number": "8801733727775",
+    "name": "Mohammad Rahi"
   },
   "features": {
     "autoReply": false,
