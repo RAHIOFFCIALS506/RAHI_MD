@@ -1,22 +1,33 @@
 {
   "bot": {
-    "name": "𝑹𝑨𝑯𝑰_𝑴𝑫",
-    "version": "2.0.0",
+    "name": "𝑹𝑨𝑯𝑰_ M𝑫",
+    "version": "2.1.0",
     "prefix": ".",
     "auth": "pr",
-    "privateMode": true
+    "privateMode": true,
+    "maintenance": false
   },
   "owner": {
-    "number": "8801733727775",
-    "name": "Mohammad Rahi"
+    "number": "8801351634937",
+    "name": "Mohammad Rahi",
+    "developer": "Rahi_Dev"
   },
   "features": {
-    "autoReply": false,
-    "antiSpam": false,
-    "welcomeMsg": false
+    "autoReply": true,
+    "antiSpam": true,
+    "welcomeMsg": true,
+    "autoRead": false,
+    "alwaysOnline": true
   },
   "limits": {
-    "messageDelay": 1000,
-    "maxRetries": 3
+    "messageDelay": 500,
+    "maxRetries": 3,
+    "cooldownMs": 3000,
+    "maxGroupMembers": 500
+  },
+  "database": {
+    "type": "json",
+    "path": "./database/data.json",
+    "autoBackup": true
   }
 }
