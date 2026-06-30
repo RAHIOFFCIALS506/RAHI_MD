@@ -6,7 +6,15 @@ export default {
   },
   execute: async (m, sock) => {
     try {
-      // Check if it is a group
+      // 1. Check for Bot Admin Permission
+      const senderId = m.key.participant || m.key.remoteJid;
+      const authorizedAdmins = ['YOUR_PHONE_NUMBER@s.whatsapp.net']; // Add authorized JIDs here
+
+      if (!authorizedAdmins.includes(senderId)) {
+        return await sock.sendMessage(m.key.remoteJid, { text: '❌ This command is restricted to bot administrators.' }, { quoted: m });
+      }
+
+      // 2. Check if it is a group
       if (!m.key.remoteJid.endsWith('@g.us')) {
         return await sock.sendMessage(m.key.remoteJid, { text: 'This command can only be used in groups.' }, { quoted: m });
       }
@@ -17,7 +25,6 @@ export default {
       
       // Filter out the bot and the person executing the command
       const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-      const senderId = m.key.participant || m.key.remoteJid;
       
       const toKick = participants
         .filter(p => p.id !== botId && p.id !== senderId && !p.admin)
@@ -37,4 +44,4 @@ export default {
       await sock.sendMessage(m.key.remoteJid, { text: 'Failed to kick members. Make sure the bot is an admin.' }, { quoted: m });
     }
   }
-}
+                                      }
