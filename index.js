@@ -90,7 +90,35 @@ const startBot = async () => {
             }
         }
     })
-// // Add this inside your message listener (e.g., inside messages.upsert)
+// At the top of index.js, initialize the tracker
+const spamTracker = new Map();
+
+sock.ev.on('messages.upsert', async ({ messages }) => {
+    const m = messages[0];
+    if (!m.message || !global.antispam) return;
+
+    const sender = m.key.participant || m.key.remoteJid;
+    const now = Date.now();
+    
+    // Get user history
+    let history = spamTracker.get(sender) || [];
+    
+    // Keep history of last 5 seconds only
+    history = history.filter(time => now - time < 5000);
+    history.push(now);
+    spamTracker.set(sender, history);
+
+    // If more than 5 messages in 5 seconds
+    if (history.length > 5) {
+        await sock.sendMessage(m.key.remoteJid, { 
+            text: "⚠️ *Stop spamming!* You are being restricted for 10 seconds." 
+        }, { quoted: m });
+        
+        // Block the sender's messages for a moment or ignore
+        spamTracker.set(sender, []); // Reset to stop double-triggering
+        return; 
+    }
+}); // Add this inside your message listener (e.g., inside messages.upsert)
 sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages[0];
     if (!m.message) return;
