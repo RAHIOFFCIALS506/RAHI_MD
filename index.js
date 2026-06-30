@@ -14,7 +14,7 @@ export let commands = new Map()
 let botReady = false
 let sock = null
 
-// ১. কমান্ড লোড করা
+// à§§. à¦•à¦®à¦¾à¦¨à§à¦¡ à¦²à§‹à¦¡ à¦•à¦°à¦¾
 const loadCommands = async () => {
     commands.clear()
     const files = readdirSync(join(__dirname, 'commands')).filter(f => f.endsWith('.js'))
@@ -26,12 +26,12 @@ const loadCommands = async () => {
                 if (Array.isArray(cmd.info.alias)) cmd.info.alias.forEach(a => commands.set(a.toLowerCase(), cmd))
             }
         } catch (e) {
-            console.error(`❌ Error loading: ${file}`)
+            console.error(`âŒ Error loading: ${file}`)
         }
     }
 }
 
-// ২. বট শুরু করা
+// à§¨. à¦¬à¦Ÿ à¦¶à§à¦°à§ à¦•à¦°à¦¾
 const startBot = async () => {
     const { state, saveCreds } = await useMultiFileAuthState('auth')
     const { version } = await fetchLatestBaileysVersion()
@@ -47,17 +47,17 @@ const startBot = async () => {
 
     sock.ev.on('creds.update', saveCreds)
 
-    // ওয়েলকাম ফিচার
+    // à¦“à§Ÿà§‡à¦²à¦•à¦¾à¦® à¦«à¦¿à¦šà¦¾à¦°
     sock.ev.on('group-participants.update', async (anu) => {
         if (!getSetting('features.welcome')) return
         if (anu.action === 'add') {
             const groupMetadata = await sock.groupMetadata(anu.id)
-            const text = `👋 স্বাগতম @${anu.participants[0].split('@')[0]} আমাদের গ্রুপে: *${groupMetadata.subject}*`
+            const text = `ðŸ‘‹ à¦¸à§à¦¬à¦¾à¦—à¦¤à¦® @${anu.participants[0].split('@')[0]} à¦†à¦®à¦¾à¦¦à§‡à¦° à¦—à§à¦°à§à¦ªà§‡: *${groupMetadata.subject}*`
             await sock.sendMessage(anu.id, { text, mentions: anu.participants })
         }
     })
 
-    // কানেকশন ও পেয়ারিং কোড সিস্টেম
+    // à¦•à¦¾à¦¨à§‡à¦•à¦¶à¦¨ à¦“ à¦ªà§‡à§Ÿà¦¾à¦°à¦¿à¦‚ à¦•à§‹à¦¡ à¦¸à¦¿à¦¸à§à¦Ÿà§‡à¦®
     sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
             if (authMode === 'qr') {
@@ -67,7 +67,7 @@ const startBot = async () => {
                 setTimeout(async () => {
                     try {
                         const code = await sock.requestPairingCode(ownerNum)
-                        console.log(`\n🔑 [PAIRING CODE]: ${code}\n`)
+                        console.log(`\nðŸ”‘ [PAIRING CODE]: ${code}\n`)
                     } catch (err) {
                         console.error("Pairing Code Error:", err)
                     }
@@ -77,21 +77,43 @@ const startBot = async () => {
 
         if (connection === 'open') {
             botReady = true
-            console.log('✅ Bot Connected Successfully!')
+            console.log('âœ… Bot Connected ð‘¹ð‘¨ð‘¯ð‘°_ð‘´ð‘«!')
         }
 
         if (connection === 'close') {
             const err = new Boom(lastDisconnect?.error)
             if (err?.output?.statusCode !== DisconnectReason.loggedOut) {
-                console.log('🔄 Reconnecting...')
+                console.log('ðŸ”„ Reconnecting...')
                 startBot()
             } else {
-                console.log('❌ Bot logged out. Delete "auth" folder and restart.')
+                console.log('âŒ Bot logged out. Delete "auth" folder and restart.')
             }
         }
     })
+// Add this event listener to your index.js file
+sock.ev.on('call', async (calls) => {
+    // Check if Anti-Call is enabled
+    if (!global.anticall) return;
 
-    // মেসেজ, অ্যান্টিলিংক ও কমান্ড হ্যান্ডলার
+    for (const call of calls) {
+        if (call.status === 'offer') { // Triggered when a call comes in
+            
+            // 1. Reject the call
+            await sock.rejectCall(call.id, call.from);
+            
+            // 2. Notify the caller
+            await sock.sendMessage(call.from, { 
+                text: "âŒ *Anti-Call Active:* My owner has disabled incoming calls. Please send a message instead." 
+            });
+
+            // 3. (Optional) Block the user
+            // await sock.updateBlockStatus(call.from, 'block');
+        }
+    }
+});
+
+
+    // à¦®à§‡à¦¸à§‡à¦œ, à¦…à§à¦¯à¦¾à¦¨à§à¦Ÿà¦¿à¦²à¦¿à¦‚à¦• à¦“ à¦•à¦®à¦¾à¦¨à§à¦¡ à¦¹à§à¦¯à¦¾à¦¨à§à¦¡à¦²à¦¾à¦°
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify' || !botReady) return
         const m = messages[0]
@@ -107,7 +129,7 @@ const startBot = async () => {
             }
         }
 
-        // কমান্ড হ্যান্ডলার
+        // à¦•à¦®à¦¾à¦¨à§à¦¡ à¦¹à§à¦¯à¦¾à¦¨à§à¦¡à¦²à¦¾à¦°
         const prefix = getSetting('bot.prefix')
         if (!text.startsWith(prefix)) return
         const args = text.slice(prefix.length).trim().split(/ +/)
@@ -116,9 +138,9 @@ const startBot = async () => {
 
         if (command) {
             try {
-                await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } })
+                await sock.sendMessage(jid, { react: { text: 'â³', key: m.key } })
                 await command.execute(m, sock, args, text, { jid })
-                await sock.sendMessage(jid, { react: { text: '✅', key: m.key } })
+                await sock.sendMessage(jid, { react: { text: 'âœ…', key: m.key } })
             } catch (e) {
                 console.error(e)
             }
