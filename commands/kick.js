@@ -5,7 +5,15 @@ export default {
     desc: 'Remove a specific member from the group'
   },
   execute: async (m, sock) => {
-    // Check if it is a group
+    // 1. Bot Admin Permission Check
+    const senderId = m.key.participant || m.key.remoteJid;
+    const authorizedAdmins = ['YOUR_PHONE_NUMBER@s.whatsapp.net']; // Replace with actual JID(s)
+
+    if (!authorizedAdmins.includes(senderId)) {
+      return await sock.sendMessage(m.key.remoteJid, { text: '❌ Access Denied: This command is for bot administrators only.' }, { quoted: m });
+    }
+
+    // 2. Check if it is a group
     if (!m.key.remoteJid.endsWith('@g.us')) {
       return await sock.sendMessage(m.key.remoteJid, { text: 'This command only works in groups.' }, { quoted: m });
     }
@@ -22,10 +30,13 @@ export default {
     try {
       // Perform the removal
       await sock.groupParticipantsUpdate(m.key.remoteJid, [target], 'remove');
-      await sock.sendMessage(m.key.remoteJid, { text: `@${target.split('@')[0]} has been removed from the group.` , mentions: [target]}, { quoted: m });
+      await sock.sendMessage(m.key.remoteJid, { 
+        text: `@${target.split('@')[0]} has been removed from the group.`, 
+        mentions: [target] 
+      }, { quoted: m });
     } catch (error) {
       console.error(error);
-      await sock.sendMessage(m.key.remoteJid, { text: 'Failed to kick the user. Ensure I have administrator permissions.' }, { quoted: m });
+      await sock.sendMessage(m.key.remoteJid, { text: 'Failed to kick the user. Ensure I have administrator permissions and the target is not an admin.' }, { quoted: m });
     }
   }
 }
