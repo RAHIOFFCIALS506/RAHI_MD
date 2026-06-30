@@ -14,7 +14,7 @@ export let commands = new Map()
 let botReady = false
 let sock = null
 
-// à§§. à¦•à¦®à¦¾à¦¨à§à¦¡ à¦²à§‹à¦¡ à¦•à¦°à¦¾
+// ১. কমান্ড লোড করা
 const loadCommands = async () => {
     commands.clear()
     const files = readdirSync(join(__dirname, 'commands')).filter(f => f.endsWith('.js'))
@@ -26,12 +26,12 @@ const loadCommands = async () => {
                 if (Array.isArray(cmd.info.alias)) cmd.info.alias.forEach(a => commands.set(a.toLowerCase(), cmd))
             }
         } catch (e) {
-            console.error(`âŒ Error loading: ${file}`)
+            console.error(`❌ Error loading: ${file}`)
         }
     }
 }
 
-// à§¨. à¦¬à¦Ÿ à¦¶à§à¦°à§ à¦•à¦°à¦¾
+// ২. বট শুরু করা
 const startBot = async () => {
     const { state, saveCreds } = await useMultiFileAuthState('auth')
     const { version } = await fetchLatestBaileysVersion()
@@ -47,17 +47,17 @@ const startBot = async () => {
 
     sock.ev.on('creds.update', saveCreds)
 
-    // à¦“à§Ÿà§‡à¦²à¦•à¦¾à¦® à¦«à¦¿à¦šà¦¾à¦°
+    // ওয়েলকাম ফিচার
     sock.ev.on('group-participants.update', async (anu) => {
         if (!getSetting('features.welcome')) return
         if (anu.action === 'add') {
             const groupMetadata = await sock.groupMetadata(anu.id)
-            const text = `ðŸ‘‹ à¦¸à§à¦¬à¦¾à¦—à¦¤à¦® @${anu.participants[0].split('@')[0]} à¦†à¦®à¦¾à¦¦à§‡à¦° à¦—à§à¦°à§à¦ªà§‡: *${groupMetadata.subject}*`
+            const text = `👋 স্বাগতম @${anu.participants[0].split('@')[0]} আমাদের গ্রুপে: *${groupMetadata.subject}*`
             await sock.sendMessage(anu.id, { text, mentions: anu.participants })
         }
     })
 
-    // à¦•à¦¾à¦¨à§‡à¦•à¦¶à¦¨ à¦“ à¦ªà§‡à§Ÿà¦¾à¦°à¦¿à¦‚ à¦•à§‹à¦¡ à¦¸à¦¿à¦¸à§à¦Ÿà§‡à¦®
+    // কানেকশন ও পেয়ারিং কোড সিস্টেম
     sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
             if (authMode === 'qr') {
@@ -67,7 +67,7 @@ const startBot = async () => {
                 setTimeout(async () => {
                     try {
                         const code = await sock.requestPairingCode(ownerNum)
-                        console.log(`\nðŸ”‘ [PAIRING CODE]: ${code}\n`)
+                        console.log(`\n🔑 [PAIRING CODE]: ${code}\n`)
                     } catch (err) {
                         console.error("Pairing Code Error:", err)
                     }
@@ -77,20 +77,50 @@ const startBot = async () => {
 
         if (connection === 'open') {
             botReady = true
-            console.log('âœ… Bot Connected ð‘¹ð‘¨ð‘¯ð‘°_ð‘´ð‘«!')
+            console.log('✅ Bot Connected 𝑹𝑨𝑯𝑰_𝑴𝑫!')
         }
 
         if (connection === 'close') {
             const err = new Boom(lastDisconnect?.error)
             if (err?.output?.statusCode !== DisconnectReason.loggedOut) {
-                console.log('ðŸ”„ Reconnecting...')
+                console.log('🔄 Reconnecting...')
                 startBot()
             } else {
-                console.log('âŒ Bot logged out. Delete "auth" folder and restart.')
+                console.log('❌ Bot logged out. Delete "auth" folder and restart.')
             }
         }
     })
-// Add this event listener to your index.js file
+// // Add this inside your message listener (e.g., inside messages.upsert)
+sock.ev.on('messages.upsert', async ({ messages }) => {
+    const m = messages[0];
+    if (!m.message) return;
+    
+    // Check if Anti-Sticker is enabled
+    if (global.antisticker) {
+        // Detect if the message is a sticker
+        const isSticker = m.message.stickerMessage || 
+                          (m.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage);
+
+        if (isSticker) {
+            // Delete the sticker message
+            await sock.sendMessage(m.key.remoteJid, { 
+                delete: { 
+                    remoteJid: m.key.remoteJid, 
+                    fromMe: false, 
+                    id: m.key.id, 
+                    participant: m.key.participant 
+                } 
+            });
+            
+            // Optional: Send a warning
+            await sock.sendMessage(m.key.remoteJid, { 
+                text: "❌ *Stickers are not allowed in this group!*" 
+            });
+        }
+    }
+    // ... rest of your message processing code
+}); 
+    
 sock.ev.on('call', async (calls) => {
     // Check if Anti-Call is enabled
     if (!global.anticall) return;
@@ -103,7 +133,7 @@ sock.ev.on('call', async (calls) => {
             
             // 2. Notify the caller
             await sock.sendMessage(call.from, { 
-                text: "âŒ *Anti-Call Active:* My owner has disabled incoming calls. Please send a message instead." 
+                text: "❌ *Anti-Call Active:* My owner has disabled incoming calls. Please send a message instead." 
             });
 
             // 3. (Optional) Block the user
@@ -113,7 +143,7 @@ sock.ev.on('call', async (calls) => {
 });
 
 
-    // à¦®à§‡à¦¸à§‡à¦œ, à¦…à§à¦¯à¦¾à¦¨à§à¦Ÿà¦¿à¦²à¦¿à¦‚à¦• à¦“ à¦•à¦®à¦¾à¦¨à§à¦¡ à¦¹à§à¦¯à¦¾à¦¨à§à¦¡à¦²à¦¾à¦°
+    // মেসেজ, অ্যান্টিলিংক ও কমান্ড হ্যান্ডলার
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify' || !botReady) return
         const m = messages[0]
@@ -129,7 +159,7 @@ sock.ev.on('call', async (calls) => {
             }
         }
 
-        // à¦•à¦®à¦¾à¦¨à§à¦¡ à¦¹à§à¦¯à¦¾à¦¨à§à¦¡à¦²à¦¾à¦°
+        // কমান্ড হ্যান্ডলার
         const prefix = getSetting('bot.prefix')
         if (!text.startsWith(prefix)) return
         const args = text.slice(prefix.length).trim().split(/ +/)
@@ -138,9 +168,9 @@ sock.ev.on('call', async (calls) => {
 
         if (command) {
             try {
-                await sock.sendMessage(jid, { react: { text: 'â³', key: m.key } })
+                await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } })
                 await command.execute(m, sock, args, text, { jid })
-                await sock.sendMessage(jid, { react: { text: 'âœ…', key: m.key } })
+                await sock.sendMessage(jid, { react: { text: '✅', key: m.key } })
             } catch (e) {
                 console.error(e)
             }
