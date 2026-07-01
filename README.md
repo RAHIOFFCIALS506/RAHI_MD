@@ -45,8 +45,7 @@
 ---
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/JawadTechXD/JawadTechXD/refs/heads/main/khanmd.jpg" width="300" style="border-radius: 20px; box-shadow: 0 0 20px #00ffff;"/>
-</div>
+ 
 
 ***
 
@@ -93,11 +92,11 @@
 
 <div align="center">
 
-### 🔥 TRY JAWAD MD MINI
+### 🔥 TRY RAHI MD MINI
 <!-- Cyber Red -->
 <p align="center">
   <a href="https://RAHIOFFCIALS50.vercel.app">
-    <img src="https://img.shields.io/badge/🚀_START_RAHI_MD-ff073a?style=for-the-badge&logo=vercel&logoColor=white&labelColor=0d0d0d" alt="JAWAD MD Mini Cyber Red"/>
+    <img src="https://img.shields.io/badge/🚀_START_RAHI_MD-ff073a?style=for-the-badge&logo=vercel&logoColor=white&labelColor=0d0d0d" alt="RAHI_MD Mini Cyber Red"/>
   </a>
 </p>
 
@@ -164,7 +163,7 @@
 ## RAHI_MD FEATURES
 
 <div align="center">
-  <img src="https://img.shields.io/badge/dynamic/json?color=purple&label=Features&style=for-the-badge&url=https://api.example.com/khanmd&query=$.features_count&suffix=%20Active" alt="Features"/>
+  <img src="https://img.shields.io/badge/dynamic/json?color=purple&label=Features&style=for-the-badge&url=https://api.example.com/rahimd&query=$.features_count&suffix=%20Active" alt="Features"/>
 </p>
 </div>
 
@@ -210,7 +209,9 @@
 <div align="center" style="margin-top: 12px; margin-bottom: 20px; background:#0b0b0b; padding: 25px; border-radius: 12px; border: 2px solid #9D00FF; box-shadow: 0 0 20px #9D00FF; width: 95%;">
 
 <a href="https://github.com/RAHIOFFCIALS506" target="_blank">
-  <img src="https://github-readme-stats-fast.vercel.app/api?username=JawadTechYT&show_icons=true&theme=tokyonight&border_color=9D00FF&title_color=00ffff&icon_color=00ffff&text_color=ffffff" width="420" alt="GitHub Stats"/>
+  <img src="https://github-readme-stats-fast.vercel.app/api?username=RAHIOFFICIALS506<img width="1254" height="1254" alt="file_0000000064987207bbaefa8dbadd3571" src="https://github.com/user-attachments/assets/2184bb5d-b752-4560-86bd-2d54cbe36ace" />
+<img width="1254" height="1254" alt="file_0000000064987207bbaefa8dbadd3571" src="https://github.com/user-attachments/assets/7ffa131b-7127-4660-8d8d-df0bd6be8157" />
+&show_icons=true&theme=tokyonight&border_color=9D00FF&title_color=00ffff&icon_color=00ffff&text_color=ffffff" width="420" alt="GitHub Stats"/>
 </a>
 
 </div>
