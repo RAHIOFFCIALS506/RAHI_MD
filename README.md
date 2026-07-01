@@ -21,7 +21,7 @@
 "> Built on Baileys • Designed for Speed • Enhanced for Stability • Powered by Mohammad Rahi 
 </div>
 </p>
-
+<img width="1254" height="1254" alt="file_0000000064987207bbaefa8dbadd3571" src="https://github.com/user-attachments/assets/7ffa131b-7127-4660-8d8d-df0bd6be8157" />
 <h1 align="center">
   <img src="https://img.shields.io/badge/-✨_RAHI--MD_INSIGHTS_✨-purple?style=for-the-badge&logo=sparkles&logoColor=white&labelColor=0d1117&color=9d4edd&label=&link=https://github.com/KHAN-MD&link=https://github.com/KHAN-MD" />
 </h1>
@@ -209,8 +209,7 @@
 <div align="center" style="margin-top: 12px; margin-bottom: 20px; background:#0b0b0b; padding: 25px; border-radius: 12px; border: 2px solid #9D00FF; box-shadow: 0 0 20px #9D00FF; width: 95%;">
 
 <a href="https://github.com/RAHIOFFCIALS506" target="_blank">
-  <img src="https://github-readme-stats-fast.vercel.app/api?username=RAHIOFFICIALS506<img width="1254" height="1254" alt="file_0000000064987207bbaefa8dbadd3571" src="https://github.com/user-attachments/assets/2184bb5d-b752-4560-86bd-2d54cbe36ace" />
-<img width="1254" height="1254" alt="file_0000000064987207bbaefa8dbadd3571" src="https://github.com/user-attachments/assets/7ffa131b-7127-4660-8d8d-df0bd6be8157" />
+  <img src="https://github-readme-stats-fast.vercel.app/api?username=RAHIOFFICIALS50
 &show_icons=true&theme=tokyonight&border_color=9D00FF&title_color=00ffff&icon_color=00ffff&text_color=ffffff" width="420" alt="GitHub Stats"/>
 </a>
 
