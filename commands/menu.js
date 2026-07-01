@@ -20,29 +20,43 @@ export default {
         const botName = getSetting('bot.name')
         const ownerName = getSetting('owner.name')
 
-        const unique = Array.from(new Set(commands.values()))
+        // কমান্ডগুলোকে ক্যাটাগরি অনুযায়ী সাজানোর জন্য একটি অবজেক্ট
+        const categories = {
+            ADMIN: [],
+            MEDIA: [],
+            FUN: [],
+            OTHER: []
+        };
+
+        commands.forEach(cmd => {
+            const cat = (cmd.info.category || 'OTHER').toUpperCase();
+            if (categories[cat]) categories[cat].push(cmd.info.name);
+            else categories['OTHER'].push(cmd.info.name);
+        });
+
         const date = new Date().toLocaleDateString('en-IN')
         const time = new Date().toLocaleTimeString('en-IN')
 
-        let text = `
-╭━━━〔 ${botName} 〕━━━⬣
+        let text = `╭━━━〔 ${botName} 〕━━━⬣
 ┃ ✦ Owner : ${ownerName}
 ┃ ✦ Prefix : ${prefix}
-┃ ✦ Commands : ${unique.length}
 ┃ ✦ Runtime : ${runtime(process.uptime())}
 ┃ ✦ Date : ${date}
 ┃ ✦ Time : ${time}
-╰━━━━━━━━━━━━━━⬣
+╰━━━━━━━━━━━━━━⬣\n\n`;
 
-╭─❍ COMMAND LIST ❍─╮\n`
+        // ক্যাটাগরি অনুযায়ী লুপ চালানো
+        for (const cat in categories) {
+            if (categories[cat].length > 0) {
+                text += `╭─❍ ${cat} MENU ❍─╮\n`;
+                categories[cat].forEach(cmd => {
+                    text += `┃ ${prefix}${cmd}\n`;
+                });
+                text += `╰━━━━━━━━━━━━━━⬣\n\n`;
+            }
+        }
 
-        unique.forEach(cmd => {
-            text += `┃ ${prefix}${cmd.info.name}\n`
-        })
-
-        text += `╰━━━━━━━━━━━━━━⬣
-
-> Type ${prefix}help <command> for details`
+        text += `> developer rahi`;
 
         await sock.sendMessage(m.key.remoteJid, { 
             text: text,
