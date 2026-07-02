@@ -23,7 +23,7 @@
 </p>
 <img width="1254" height="1254" alt="file_0000000064987207bbaefa8dbadd3571" src="https://github.com/user-attachments/assets/7ffa131b-7127-4660-8d8d-df0bd6be8157" />
 <h1 align="center">
-  <img src="https://img.shields.io/badge/-✨_RAHI--MD_INSIGHTS_✨-purple?style=for-the-badge&logo=sparkles&logoColor=white&labelColor=0d1117&color=9d4edd&label=&link=https://github.com/KHAN-MD&link=https://github.com/KHAN-MD" />
+  <img src="https://img.shields.io/badge/-✨_RAHI--MD_INSIGHTS_✨-purple?style=for-the-badge&logo=sparkles&logoColor=white&labelColor=0d1117&color=9d4edd&label=&link=https://github.com/RAHI_MD&link=https://github.com/RAHI_MD" />
 </h1>
 </p>
 </p>
@@ -194,7 +194,7 @@
 📢 Get updates, fixes, and sneak peeks directly from the official channel.
 </p>
 
-<a href="https://whatsapp.com/channel/0029VatOy2EAzNc2WcShQw1j" target="_blank">
+<a href="https://whatsapp.com/channel/0029VbCiKTOKmCPI8UpXpx1T" target="_blank">
   <img src="https://img.shields.io/badge/JOIN_CHANNEL-NOW-8A2BE2?style=for-the-badge&logo=whatsapp&logoColor=white&labelColor=111111" alt="Join WhatsApp Channel"/>
 </a>
 
