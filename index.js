@@ -6,6 +6,7 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import qrcode from 'qrcode-terminal'
 import { loadSettings, getSetting } from './settings.js'
+import { handleMessage } from './handler.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 await loadSettings()
@@ -14,7 +15,7 @@ export let commands = new Map()
 let botReady = false
 let sock = null
 
-// ১. কমান্ড লোড করা
+// ১. কমান্ড লোডার
 const loadCommands = async () => {
     commands.clear()
     const files = readdirSync(join(__dirname, 'commands')).filter(f => f.endsWith('.js'))
@@ -23,7 +24,9 @@ const loadCommands = async () => {
             const { default: cmd } = await import(`./commands/${file}?t=${Date.now()}`)
             if (cmd?.info?.name && cmd?.execute) {
                 commands.set(cmd.info.name.toLowerCase(), cmd)
-                if (Array.isArray(cmd.info.alias)) cmd.info.alias.forEach(a => commands.set(a.toLowerCase(), cmd))
+                if (Array.isArray(cmd.info.alias)) {
+                    cmd.info.alias.forEach(a => commands.set(a.toLowerCase(), cmd))
+                }
             }
         } catch (e) {
             console.error(`❌ Error loading: ${file}`)
@@ -31,7 +34,7 @@ const loadCommands = async () => {
     }
 }
 
-// ২. বট শুরু করা
+// ২. স্টার্ট বট
 const startBot = async () => {
     const { state, saveCreds } = await useMultiFileAuthState('auth')
     const { version } = await fetchLatestBaileysVersion()
@@ -47,7 +50,7 @@ const startBot = async () => {
 
     sock.ev.on('creds.update', saveCreds)
 
-    // ওয়েলকাম ফিচার
+    // ওয়েলকাম সিস্টেম
     sock.ev.on('group-participants.update', async (anu) => {
         if (!getSetting('features.welcome')) return
         if (anu.action === 'add') {
@@ -57,7 +60,7 @@ const startBot = async () => {
         }
     })
 
-    // কানেকশন ও পেয়ারিং কোড সিস্টেম
+    // কালারফুল পেয়ারিং সিস্টেম
     sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
             if (authMode === 'qr') {
@@ -67,7 +70,19 @@ const startBot = async () => {
                 setTimeout(async () => {
                     try {
                         const code = await sock.requestPairingCode(ownerNum)
-                        console.log(`\n🔑 [PAIRING CODE]: ${code}\n`)
+                        const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code
+                        
+                        const cyan = '\x1b[36m'
+                        const yellow = '\x1b[33m'
+                        const green = '\x1b[32m'
+                        const bold = '\x1b[1m'
+                        const reset = '\x1b[0m'
+                        
+                        console.log(`\n${cyan}┌────────────────────────────────────────┐${reset}`)
+                        console.log(`${cyan}│${reset}        ${yellow}${bold}🔑 WHATSAPP PAIRING CODE${reset}         ${cyan}│${reset}`)
+                        console.log(`${cyan}├────────────────────────────────────────┤${reset}`)
+                        console.log(`${cyan}│${reset}  Your Code: ${green}${bold}${formattedCode.padEnd(25)}${reset}   ${cyan}│${reset}`)
+                        console.log(`${cyan}└────────────────────────────────────────┘${reset}\n`)
                     } catch (err) {
                         console.error("Pairing Code Error:", err)
                     }
@@ -77,132 +92,39 @@ const startBot = async () => {
 
         if (connection === 'open') {
             botReady = true
-            console.log('✅ Bot Connected 𝑹𝑨𝑯𝑰_𝑴𝑫!')
+            console.log('\x1b[32m\x1b[1m✅ Bot Connected 𝑹𝑨𝑯𝑰_𝑴𝑫!\x1b[0m')
         }
 
         if (connection === 'close') {
             const err = new Boom(lastDisconnect?.error)
             if (err?.output?.statusCode !== DisconnectReason.loggedOut) {
-                console.log('🔄 Reconnecting...')
+                console.log('\x1b[33m🔄 Reconnecting...\x1b[0m')
                 startBot()
             } else {
-                console.log('❌ Bot logged out. Delete "auth" folder and restart.')
+                console.log('\x1b[31m❌ Bot logged out. Delete "auth" folder and restart.\x1b[0m')
             }
         }
     })
-// At the top of index.js, initialize the tracker
-const spamTracker = new Map();
 
-sock.ev.on('messages.upsert', async ({ messages }) => {
-    const m = messages[0];
-    if (!m.message || !global.antispam) return;
+    // অ্যান্টি-কল
+    sock.ev.on('call', async (calls) => {
+        if (!global.anticall) return
 
-    const sender = m.key.participant || m.key.remoteJid;
-    const now = Date.now();
-    
-    // Get user history
-    let history = spamTracker.get(sender) || [];
-    
-    // Keep history of last 5 seconds only
-    history = history.filter(time => now - time < 5000);
-    history.push(now);
-    spamTracker.set(sender, history);
-
-    // If more than 5 messages in 5 seconds
-    if (history.length > 5) {
-        await sock.sendMessage(m.key.remoteJid, { 
-            text: "⚠️ *Stop spamming!* You are being restricted for 10 seconds." 
-        }, { quoted: m });
-        
-        // Block the sender's messages for a moment or ignore
-        spamTracker.set(sender, []); // Reset to stop double-triggering
-        return; 
-    }
-}); // Add this inside your message listener (e.g., inside messages.upsert)
-sock.ev.on('messages.upsert', async ({ messages }) => {
-    const m = messages[0];
-    if (!m.message) return;
-    
-    // Check if Anti-Sticker is enabled
-    if (global.antisticker) {
-        // Detect if the message is a sticker
-        const isSticker = m.message.stickerMessage || 
-                          (m.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage);
-
-        if (isSticker) {
-            // Delete the sticker message
-            await sock.sendMessage(m.key.remoteJid, { 
-                delete: { 
-                    remoteJid: m.key.remoteJid, 
-                    fromMe: false, 
-                    id: m.key.id, 
-                    participant: m.key.participant 
-                } 
-            });
-            
-            // Optional: Send a warning
-            await sock.sendMessage(m.key.remoteJid, { 
-                text: "❌ *Stickers are not allowed in this group!*" 
-            });
+        for (const call of calls) {
+            if (call.status === 'offer') {
+                await sock.rejectCall(call.id, call.from)
+                await sock.sendMessage(call.from, { 
+                    text: "❌ *Anti-Call Active:* Incoming calls are disabled. Please send a text message." 
+                })
+            }
         }
-    }
-    // ... rest of your message processing code
-}); 
-    
-sock.ev.on('call', async (calls) => {
-    // Check if Anti-Call is enabled
-    if (!global.anticall) return;
+    })
 
-    for (const call of calls) {
-        if (call.status === 'offer') { // Triggered when a call comes in
-            
-            // 1. Reject the call
-            await sock.rejectCall(call.id, call.from);
-            
-            // 2. Notify the caller
-            await sock.sendMessage(call.from, { 
-                text: "❌ *Anti-Call Active:* My owner has disabled incoming calls. Please send a message instead." 
-            });
-
-            // 3. (Optional) Block the user
-            // await sock.updateBlockStatus(call.from, 'block');
-        }
-    }
-});
-
-
-    // মেসেজ, অ্যান্টিলিংক ও কমান্ড হ্যান্ডলার
+    // মেসেজ ইভেন্ট
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify' || !botReady) return
         const m = messages[0]
-        if (!m.message) return
-        const jid = m.key.remoteJid
-        const text = m.message?.conversation || m.message?.extendedTextMessage?.text || ""
-
-        // Antilink
-        if (getSetting('features.antilink') && jid.endsWith('@g.us') && !m.key.fromMe) {
-            const linkRegex = /(https?:\/\/)?(chat\.whatsapp\.com|wa\.me)\/([a-zA-Z0-9]+)/gi
-            if (linkRegex.test(text)) {
-                await sock.sendMessage(jid, { delete: m.key }).catch(() => {})
-            }
-        }
-
-        // কমান্ড হ্যান্ডলার
-        const prefix = getSetting('bot.prefix')
-        if (!text.startsWith(prefix)) return
-        const args = text.slice(prefix.length).trim().split(/ +/)
-        const cmdName = args.shift().toLowerCase()
-        const command = commands.get(cmdName)
-
-        if (command) {
-            try {
-                await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } })
-                await command.execute(m, sock, args, text, { jid })
-                await sock.sendMessage(jid, { react: { text: '✅', key: m.key } })
-            } catch (e) {
-                console.error(e)
-            }
-        }
+        await handleMessage(sock, m, commands)
     })
 }
 
