@@ -1,47 +1,79 @@
+import { getSetting } from '../settings.js';
+
 export default {
-  info: {
-    name: 'kickall',
-    alias: ['removeall'],
-    desc: 'Remove all participants from the group'
+  info: { 
+    name: "kickall", 
+    alias: ["removeall"] 
   },
-  execute: async (m, sock) => {
+
+  execute: async (m, sock, args, text, ctx) => {
+    const { jid, sender } = ctx;
+
+    // 1. Check if the command is executed in a group
+    if (!jid.endsWith('@g.us')) {
+      return await sock.sendMessage(jid, { 
+        text: "❌ *Error:* This command can only be used in groups." 
+      }, { quoted: m });
+    }
+
     try {
-      // 1. Check for Bot Admin Permission
-      const senderId = m.key.participant || m.key.remoteJid;
-      const authorizedAdmins = ['YOUR_PHONE_NUMBER@s.whatsapp.net']; // Add authorized JIDs here
-
-      if (!authorizedAdmins.includes(senderId)) {
-        return await sock.sendMessage(m.key.remoteJid, { text: '❌ This command is restricted to bot administrators.' }, { quoted: m });
-      }
-
-      // 2. Check if it is a group
-      if (!m.key.remoteJid.endsWith('@g.us')) {
-        return await sock.sendMessage(m.key.remoteJid, { text: 'This command can only be used in groups.' }, { quoted: m });
-      }
-
-      // Get group metadata to find participants
-      const groupMetadata = await sock.groupMetadata(m.key.remoteJid);
+      // Get group metadata
+      const groupMetadata = await sock.groupMetadata(jid);
       const participants = groupMetadata.participants;
-      
-      // Filter out the bot and the person executing the command
-      const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-      
-      const toKick = participants
-        .filter(p => p.id !== botId && p.id !== senderId && !p.admin)
+
+      // 2. Check if the bot is an admin
+      const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+      const botAdmin = participants.find(p => p.id === botNumber)?.admin;
+
+      if (!botAdmin) {
+        return await sock.sendMessage(jid, { 
+          text: "❌ *Error:* I need to be an admin to execute this command." 
+        }, { quoted: m });
+      }
+
+      // 3. Check if sender is an admin or the bot owner
+      const ownerNumber = getSetting('owner.number').replace(/\D/g, '') + '@s.whatsapp.net';
+      const isOwner = sender.includes(ownerNumber);
+      const isSenderAdmin = participants.find(p => p.id === sender)?.admin;
+
+      if (!isSenderAdmin && !isOwner) {
+        return await sock.sendMessage(jid, { 
+          text: "❌ *Access Denied:* Only group admins or the bot owner can use this command." 
+        }, { quoted: m });
+      }
+
+      // 4. Filter members (excludes admins, bot, and owner)
+      const membersToKick = participants
+        .filter(p => !p.admin && p.id !== botNumber)
         .map(p => p.id);
 
-      if (toKick.length === 0) {
-        return await sock.sendMessage(m.key.remoteJid, { text: 'No removable participants found.' }, { quoted: m });
+      if (membersToKick.length === 0) {
+        return await sock.sendMessage(jid, { 
+          text: "⚠️ No regular members found to kick!" 
+        }, { quoted: m });
       }
 
-      // Remove participants
-      await sock.groupParticipantsUpdate(m.key.remoteJid, toKick, 'remove');
-      
-      await sock.sendMessage(m.key.remoteJid, { text: `Successfully kicked ${toKick.length} members.` }, { quoted: m });
-      
+      // Initial Notification
+      await sock.sendMessage(jid, { 
+        text: `⚠️ *Kickall Started:* Removing ${membersToKick.length} members...` 
+      }, { quoted: m });
+
+      // 5. Remove members with 1-second delay (prevents WhatsApp ban)
+      for (const member of membersToKick) {
+        await sock.groupParticipantsUpdate(jid, [member], "remove");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // Completion Message
+      await sock.sendMessage(jid, { 
+        text: "✅ *Kickall Completed:* All non-admin members have been successfully removed." 
+      });
+
     } catch (error) {
-      console.error(error);
-      await sock.sendMessage(m.key.remoteJid, { text: 'Failed to kick members. Make sure the bot is an admin.' }, { quoted: m });
+      console.error("Kickall Error:", error);
+      await sock.sendMessage(jid, { 
+        text: "❌ An error occurred while executing the command." 
+      }, { quoted: m });
     }
   }
-                                      }
+};
