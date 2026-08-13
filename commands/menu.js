@@ -20,42 +20,30 @@ export default {
         const botName = getSetting('bot.name')
         const ownerName = getSetting('owner.name')
 
-        const unique = Array.from(new Set(commands.values()))
+        const uniqueCmds = Array.from(new Set(commands.values()))
         const date = new Date().toLocaleDateString('en-IN')
         const time = new Date().toLocaleTimeString('en-IN')
 
-        let text = `
-╭━━━〔 ${botName} 〕━━━⬣
-┃ ✦ Owner : ${ownerName}
-┃ ✦ Prefix : ${prefix}
-┃ ✦ Commands : ${unique.length}
-┃ ✦ Runtime : ${runtime(process.uptime())}
-┃ ✦ Date : ${date}
-┃ ✦ Time : ${time}
-╰━━━━━━━━━━━━━━⬣
+        let text = `✨ 𝑾𝑬𝑳𝑪𝑶𝑴𝑬 𝑻𝑶 ${botName} ✨\n\n`
+        text += `╭━━━〔 💛 *𝐁𝐎𝐓 𝐈𝐍𝐅𝐎* 💛 〕━━━⬣\n`
+        text += `┃ 🔱 *Owner* : ${ownerName}\n`
+        text += `┃ ⭐ *Prefix* : [ ${prefix} ]\n`
+        text += `┃ 📦 *Commands* : ${uniqueCmds.length}\n`
+        text += `┃ ⏳ *Uptime* : ${runtime(process.uptime())}\n`
+        text += `┃ 📅 *Date* : ${date}\n`
+        text += `┃ ⏰ *Time* : ${time}\n`
+        text += `╰━━━━━━━━━━━━━━━━━━━━━⬣\n\n`
 
-╭─❍ COMMAND LIST ❍─╮\n`
+        text += `╭━━━〔 🟡 *𝐀𝐋𝐋 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒* 🟡 〕━━━⬣\n`
 
-        unique.forEach(cmd => {
-            text += `┃ ${prefix}${cmd.info.name}\n`
+        uniqueCmds.forEach((cmd, idx) => {
+            const num = (idx + 1).toString().padStart(2, '0')
+            text += `┃ 🗂️ ❬ *${num}* ❭ ❯ *${prefix}${cmd.info.name}*\n`
         })
 
-        text += `╰━━━━━━━━━━━━━━⬣
+        text += `╰━━━━━━━━━━━━━━━━━━━━━⬣\n\n`
+        text += `> 💛 *Powered by ${botName} Official*`
 
-> Type ${prefix}help <command> for details`
-
-        await sock.sendMessage(m.key.remoteJid, { 
-            text: text,
-            contextInfo: {
-                externalAdReply: {
-                    title: "𝑹𝑨𝑯𝑰_𝑴𝑫 Control Center",
-                    body: "Professional WhatsApp Bot",
-                    thumbnailUrl: "https://i.postimg.cc/05p6KqCc/1768548671157.jpg",
-                    sourceUrl: "https://github.com/RAHIOFFCIALS506/RAHI_MD",
-                    mediaType: 1,
-                    renderLargerThumbnail: true
-                }
-            }
-        }, { quoted: m })
+        await sock.sendMessage(m.key.remoteJid, { text }, { quoted: m })
     }
-}
+            }
