@@ -51,15 +51,33 @@ export async function handleMessage(sock, m, commands) {
     }
 
     // ৩. অ্যান্টি-লিংক (Anti-Link)
-    const text = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || ""
-    if (getSetting('features.antilink') && jid.endsWith('@g.us') && !m.key.fromMe) {
-      const linkRegex = /(https?:\/\/)?(chat\.whatsapp\.com|wa\.me)\/([a-zA-Z0-9]+)/gi
-      if (linkRegex.test(text)) {
-        await sock.sendMessage(jid, { delete: m.key }).catch(() => {})
-        return
-      }
-    }
+    // ৩. অ্যান্টি-লিংক ও অটো-কিক লজিক (Anti-Link Logic)
+  const text = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || ""
+  const isGroup = jid.endsWith('@g.us')
 
+  if (isGroup && global.antilinkMode && global.antilinkMode[jid] && global.antilinkMode[jid] !== 'off' && !m.key.fromMe) {
+    const linkRegex = /(https?:\/\/)?(chat\.whatsapp\.com|wa\.me)\/([a-zA-Z0-9]+)/gi
+    if (linkRegex.test(text)) {
+      // ১. মেসেজ ডিলেট করা
+      await sock.sendMessage(jid, { delete: m.key }).catch(() => {})
+
+      // ২. মোড যদি Kick হয় তবে ইউজারকে কিক করা
+      if (global.antilinkMode[jid] === 'kick') {
+        const groupMetadata = await sock.groupMetadata(jid)
+        const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+        const botAdmin = groupMetadata.participants.find(p => p.id === botJid)?.admin
+
+        if (botAdmin) {
+          await sock.groupParticipantsUpdate(jid, [sender], 'remove').catch(() => {})
+          await sock.sendMessage(jid, { 
+            text: `🚫 @${sender.split('@')[0]} was kicked for sending links!`, 
+            mentions: [sender] 
+          })
+        }
+      }
+      return
+    }
+                                   }
     // ৪. কমান্ড হ্যান্ডলার (Command Executer)
     const prefix = getSetting('bot.prefix') || '.'
     if (!text.startsWith(prefix)) return
