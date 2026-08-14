@@ -20,6 +20,7 @@ export default {
             const prefix = getSetting('bot.prefix') || '.'
             const botName = getSetting('bot.name') || '𝑹𝑨𝑯𝑰_𝑴𝑫'
             const ownerName = getSetting('owner.name') || 'RAHI'
+            const menuPic = getSetting('bot.image') || 'https://i.postimg.cc/05p6KqCc/1768548671157.jpg'
 
             const uniqueCmds = commands ? Array.from(new Set(commands.values())) : []
 
@@ -35,7 +36,7 @@ export default {
                 hour12: true
             })
 
-            // সুন্দর ও প্রিমিয়াম এস্টেটিক থিম
+            // Aesthetic menu design
             let text = `
 ✨ ━━━⟨ 👑 *${botName}* 👑 ⟩━━━ ✨
 
@@ -64,15 +65,14 @@ export default {
 
 > 💛 *Powered by ${botName} Official*`
 
+            // Send Image with Menu Caption
             await sock.sendMessage(m.key.remoteJid, { 
-                text: text,
+                image: { url: menuPic },
+                caption: text,
                 contextInfo: {
                     externalAdReply: {
                         title: `✨ ${botName} MAIN MENU ✨`,
-                        body: "WhatsApp Automated System",
-                        thumbnailUrl: "https://i.postimg.cc/05p6KqCc/1768548671157.jpg",
-                        sourceUrl: "https://whatsapp.com",
-                        mediaType: 1,
+                        
                         renderLargerThumbnail: true
                     }
                 }
@@ -85,4 +85,4 @@ export default {
             }, { quoted: m })
         }
     }
-}
+    }
