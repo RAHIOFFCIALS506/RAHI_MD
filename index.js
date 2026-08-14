@@ -48,17 +48,12 @@ const startBot = async () => {
         syncFullHistory: false
     })
 
-    sock.ev.on('creds.update', saveCreds)
+    // ... আগের অন্য কোড ...
 
-    // ওয়েলকাম সিস্টেম
-    sock.ev.on('group-participants.update', async (anu) => {
-        if (!getSetting('features.welcome')) return
-        if (anu.action === 'add') {
-            const groupMetadata = await sock.groupMetadata(anu.id)
-            const text = `👋 স্বাগতম @${anu.participants[0].split('@')[0]} আমাদের গ্রুপে: *${groupMetadata.subject}*`
-            await sock.sendMessage(anu.id, { text, mentions: anu.participants })
-        }
-    })
+// এই ইভেন্ট লিসেনারটি না থাকলে Welcome/Goodbye মেসেজ ট্রিগার হবে না
+sock.ev.on('group-participants.update', async (update) => {
+    await handleGroupParticipants(sock, update)
+})
 
     // কালারফুল পেয়ারিং সিস্টেম
     sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
