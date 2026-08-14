@@ -1,80 +1,28 @@
-import { getSetting } from '../settings.js';
-
 export default {
-  info: { 
-    name: "setname", 
-    alias: ["setbotname", "setgroupname"] 
-  },
+    info: {
+        name: 'setname',
+        alias: ['setsubject', 'groupname'],
+        desc: 'Change group subject/name'
+    },
+    execute: async (m, sock) => {
+        try {
+            if (!m.key.remoteJid.endsWith('@g.us')) {
+                return await sock.sendMessage(m.key.remoteJid, { text: '❌ *This command can only be used in groups!*' }, { quoted: m })
+            }
 
-  execute: async (m, sock, args, text, ctx) => {
-    const { jid, sender } = ctx;
+            const text = m.message?.conversation || m.message?.extendedTextMessage?.text || ''
+            const newName = text.split(' ').slice(1).join(' ')
 
-    // Check if new name text was provided
-    if (!text) {
-      return await sock.sendMessage(jid, { 
-        text: "⚠️ *Usage:* Provide the new name.\n\n*Examples:*\n• `.setname My Bot Name` (In Private Chat - Changes Bot Name)\n• `.setname New Group Title` (In Group Chat - Changes Group Name)" 
-      }, { quoted: m });
+            if (!newName) {
+                return await sock.sendMessage(m.key.remoteJid, { text: '⚠️ *Please provide a new group name!*\n\n*Example:* `.setname My Cool Group`' }, { quoted: m })
+            }
+
+            await sock.groupUpdateSubject(m.key.remoteJid, newName)
+            await sock.sendMessage(m.key.remoteJid, { text: `✅ *Group name updated to:* "${newName}"` }, { quoted: m })
+
+        } catch (error) {
+            console.error("SetName Error:", error)
+            await sock.sendMessage(m.key.remoteJid, { text: '❌ *Error:* I need to be a **Group Admin** to change the group name!' }, { quoted: m })
+        }
     }
-
-    try {
-      const isGroup = jid.endsWith('@g.us');
-
-      // --- 1. GROUP NAME CHANGE ---
-      if (isGroup) {
-        const groupMetadata = await sock.groupMetadata(jid);
-        const participants = groupMetadata.participants;
-
-        // Check if bot is admin
-        const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-        const isBotAdmin = participants.find(p => p.id === botNumber)?.admin;
-
-        if (!isBotAdmin) {
-          return await sock.sendMessage(jid, { 
-            text: "❌ *Error:* I need to be a group admin to change the group name." 
-          }, { quoted: m });
-        }
-
-        // Check if sender is admin or bot owner
-        const ownerNumber = getSetting('owner.number').replace(/\D/g, '') + '@s.whatsapp.net';
-        const isOwner = sender.includes(ownerNumber);
-        const isSenderAdmin = participants.find(p => p.id === sender)?.admin;
-
-        if (!isSenderAdmin && !isOwner) {
-          return await sock.sendMessage(jid, { 
-            text: "❌ *Access Denied:* Only group admins or the bot owner can change the group name." 
-          }, { quoted: m });
-        }
-
-        // Update Group Subject
-        await sock.groupUpdateSubject(jid, text);
-        return await sock.sendMessage(jid, { 
-          text: `✅ *Success:* Group name updated to:\n*"${text}"*` 
-        }, { quoted: m });
-      } 
-      
-      // --- 2. BOT NAME CHANGE (In Private Chat / DM) ---
-      else {
-        const ownerNumber = getSetting('owner.number').replace(/\D/g, '') + '@s.whatsapp.net';
-        const isOwner = sender.includes(ownerNumber);
-
-        if (!isOwner) {
-          return await sock.sendMessage(jid, { 
-            text: "❌ *Access Denied:* Only the bot owner can change the bot's name." 
-          }, { quoted: m });
-        }
-
-        // Update Profile Name
-        await sock.updateProfileName(text);
-        return await sock.sendMessage(jid, { 
-          text: `✅ *Success:* Bot profile name changed to:\n*"${text}"*` 
-        }, { quoted: m });
-      }
-
-    } catch (error) {
-      console.error("SetName Error:", error);
-      await sock.sendMessage(jid, { 
-        text: "❌ *Failed:* Could not update the name. Make sure the text isn't too long." 
-      }, { quoted: m });
-    }
-  }
-};
+}
