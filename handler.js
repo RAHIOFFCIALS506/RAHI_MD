@@ -77,4 +77,86 @@ export async function handleMessage(sock, m, commands) {
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
     }
   }
+}
+
+/**
+ * গ্রুপ ওয়েলকাম ও গুডবাই হ্যান্ডলার (Group Participants Update Handler)
+ */
+export async function handleGroupParticipants(sock, update) {
+  try {
+    const { id, participants, action } = update;
+    const botName = getSetting('bot.name') || '𝑹𝑨𝑯𝑰_𝑴𝑫';
+
+    const groupMetadata = await sock.groupMetadata(id);
+    const groupName = groupMetadata.subject;
+    const totalMembers = groupMetadata.participants.length;
+
+    for (const jid of participants) {
+      const userNum = jid.split('@')[0];
+
+      // ১. নতুন মেম্বার জয়েন করলে (Welcome)
+      if (action === 'add') {
+        let welcomeText = `
+✨ ━━━━━━━⟨ 🥳 *𝑾𝑬𝑳𝑪𝑶𝑴𝑬* 🥳 ⟩━━━━━━━ ✨
+
+👋 *Hello* @${userNum}!
+🎉 Welcome to *${groupName}*!
+
+╭━━━〔 🟡 *𝐺𝑅𝑶𝑈𝑃 𝐼𝑁𝐹𝑂* 🟡 〕━━━⬣
+┃ 👥 *Total Members* : ${totalMembers}
+┃ 🤖 *Bot System*    : ${botName}
+╰━━━━━━━━━━━━━━━━━━━━━━━━⬣
+
+> 💛 *Please make sure to read the group description and enjoy your stay!*`;
+
+        await sock.sendMessage(id, {
+          text: welcomeText,
+          mentions: [jid],
+          contextInfo: {
+            externalAdReply: {
+              title: `🎉 WELCOME TO ${groupName.toUpperCase()} 🎉`,
+              body: `You are member #${totalMembers}`,
+              thumbnailUrl: "https://i.postimg.cc/05p6KqCc/1768548671157.jpg",
+              sourceUrl: "https://whatsapp.com",
+              mediaType: 1,
+              renderLargerThumbnail: true
+            }
+          }
+        });
       }
+
+      // ২. কোনো মেম্বার লিভ নিলে বা কিক খেলে (Goodbye / Left)
+      if (action === 'remove') {
+        let goodbyeText = `
+✨ ━━━━━━━⟨ 💔 *𝐺𝑂𝑂𝐷𝐵𝑌𝐸* 💔 ⟩━━━━━━━ ✨
+
+👋 Goodbye @${userNum}!
+We are sad to see you leave *${groupName}*.
+
+╭━━━〔 🟡 *𝐺𝑅𝑶𝑈𝑃 𝑆𝑇𝐴𝑇𝑆* 🟡 〕━━━⬣
+┃ 👥 *Remaining Members* : ${totalMembers}
+┃ 🤖 *Bot System*        : ${botName}
+╰━━━━━━━━━━━━━━━━━━━━━━━━⬣
+
+> 💛 *We wish you all the best for the future!*`;
+
+        await sock.sendMessage(id, {
+          text: goodbyeText,
+          mentions: [jid],
+          contextInfo: {
+            externalAdReply: {
+              title: `👋 MEMBER LEFT ${groupName.toUpperCase()}`,
+              body: `Remaining Members: ${totalMembers}`,
+              thumbnailUrl: "https://i.postimg.cc/05p6KqCc/1768548671157.jpg",
+              sourceUrl: "https://whatsapp.com",
+              mediaType: 1,
+              renderLargerThumbnail: true
+            }
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Group Participants Event Error:", error);
+  }
+          }
