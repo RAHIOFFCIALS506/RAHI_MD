@@ -6,7 +6,7 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import qrcode from 'qrcode-terminal'
 import { loadSettings, getSetting } from './settings.js'
-import { handleMessage } from './handler.js'
+import { handleMessage, handleGroupParticipants } from './handler.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 await loadSettings()
@@ -119,7 +119,16 @@ const startBot = async () => {
             }
         }
     })
+// Message event
+sock.ev.on('messages.upsert', async (chatUpdate) => {
+  const m = chatUpdate.messages[0];
+  await handleMessage(sock, m, commands);
+});
 
+// Group participants update event (Welcome & Goodbye)
+sock.ev.on('group-participants.update', async (update) => {
+  await handleGroupParticipants(sock, update);
+});
     // মেসেজ ইভেন্ট
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify' || !botReady) return
