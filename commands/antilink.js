@@ -1,30 +1,48 @@
-global.antilink = global.antilink || {};
-global.antilinkKick = global.antilinkKick || {};
+import { getSetting } from '../settings.js'
 
 export default {
-  info: {
-    name: 'antilink',
-    alias: ['anti-link'],
-    desc: 'Configure antilink: .antilink on | .antilink kick on | .antilink off'
-  },
-  execute: async (m, sock, args) => {
-    const jid = m.key.remoteJid;
-    const option = args[0]?.toLowerCase();
+    info: {
+        name: 'antilink',
+        alias: ['linkprotection'],
+        desc: 'Turn Anti-Link system on/off or set to kick'
+    },
+    execute: async (m, sock, args) => {
+        try {
+            const jid = m.key.remoteJid
+            if (!jid.endsWith('@g.us')) {
+                return await sock.sendMessage(jid, { text: '❌ *This command can only be used in groups!*' }, { quoted: m })
+            }
 
-    if (option === 'on') {
-      global.antilink[jid] = true;
-      global.antilinkKick[jid] = false;
-      await sock.sendMessage(jid, { text: '✅ Antilink enabled (Delete mode).' }, { quoted: m });
-    } else if (option === 'kick' && args[1]?.toLowerCase() === 'on') {
-      global.antilink[jid] = true;
-      global.antilinkKick[jid] = true;
-      await sock.sendMessage(jid, { text: '✅ Antilink enabled (Kick mode active - 3 warnings).' }, { quoted: m });
-    } else if (option === 'off') {
-      global.antilink[jid] = false;
-      global.antilinkKick[jid] = false;
-      await sock.sendMessage(jid, { text: '❌ Antilink disabled.' }, { quoted: m });
-    } else {
-      await sock.sendMessage(jid, { text: 'Usage:\n.antilink on\n.antilink kick on\n.antilink off' }, { quoted: m });
+            const groupMetadata = await sock.groupMetadata(jid)
+            const sender = m.key.participant || m.key.remoteJid
+            const senderAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin
+
+            if (!senderAdmin && !m.key.fromMe) {
+                return await sock.sendMessage(jid, { text: '❌ *Only Group Admins can toggle Anti-Link!*' }, { quoted: m })
+            }
+
+            const mode = args[0]?.toLowerCase()
+
+            if (!global.antilinkMode) global.antilinkMode = {}
+
+            if (mode === 'on') {
+                global.antilinkMode[jid] = 'delete'
+                await sock.sendMessage(jid, { text: '✅ *Anti-Link Enabled!* (Action: Delete Message)' }, { quoted: m })
+            } else if (mode === 'kick') {
+                global.antilinkMode[jid] = 'kick'
+                await sock.sendMessage(jid, { text: '🚨 *Anti-Link Active!* (Action: Delete Message & Kick Member)' }, { quoted: m })
+            } else if (mode === 'off') {
+                global.antilinkMode[jid] = 'off'
+                await sock.sendMessage(jid, { text: '❌ *Anti-Link Disabled!*' }, { quoted: m })
+            } else {
+                await sock.sendMessage(jid, { 
+                    text: '⚠️ *Usage:* \n.antilink on\n.antilink kick\n.antilink off' 
+                }, { quoted: m })
+            }
+
+        } catch (error) {
+            console.error("Anti-Link Error:", error)
+            await sock.sendMessage(m.key.remoteJid, { text: '❌ *Failed to update Anti-Link status.*' }, { quoted: m })
+        }
     }
-  }
-}
+                                   }
