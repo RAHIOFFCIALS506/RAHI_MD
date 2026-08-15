@@ -3,7 +3,7 @@ import { getSetting } from './settings.js'
 const spamTracker = new Map()
 
 /**
- * 1. Main Message & Feature Handler (Merged: Anti-Features + Owner Guard + Command Engine)
+ * 1. Main Message & Feature Handler
  */
 export async function handleMessage(sock, m, commands) {
   try {
@@ -18,16 +18,12 @@ export async function handleMessage(sock, m, commands) {
     const sender = participant || jid
     const userNumber = sender ? sender.split('@')[0].replace(/\D/g, '') : ''
 
-    // 👑 Config Owner Number Extraction
-    const rawOwner = getSetting('owner.number') || '8801711209381'
-    const ownerNumbers = Array.isArray(rawOwner) 
-        ? rawOwner.map(num => String(num).replace(/\D/g, '8801711209381'))
-        : [String(rawOwner).replace(/\D/g, '8801711209381')]
+   
 
     // Check if the sender is an owner
     const isOwner = m.key.fromMe || ownerNumbers.includes(userNumber)
 
-    // 📝 Extract Message Text (Normal text, extended context, captions)
+    // 📝 Extract Message Text
     const text = m.message?.conversation || 
                  m.message?.extendedTextMessage?.text || 
                  m.message?.imageMessage?.caption || 
@@ -52,8 +48,7 @@ export async function handleMessage(sock, m, commands) {
 
     // ─── 🖼️ 2. Anti-Sticker System ───
     if (global.antisticker && isGroup && !isOwner) {
-      const isSticker = m.message?.stickerMessage
-      if (isSticker) {
+      if (m.message?.stickerMessage) {
         await sock.sendMessage(jid, { delete: m.key }).catch(() => {})
         return
       }
@@ -68,12 +63,9 @@ export async function handleMessage(sock, m, commands) {
           const groupMetadata = await sock.groupMetadata(jid)
           const senderAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin
 
-          // Skip if sender is a Group Admin or Owner
           if (!senderAdmin && !isOwner) {
-            // Delete Link Message
             await sock.sendMessage(jid, { delete: m.key }).catch(() => {})
 
-            // Kick action if set to 'kick' mode
             if (global.antilinkMode[jid] === 'kick') {
               const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : ''
               const botAdmin = groupMetadata.participants.find(p => p.id === botJid)?.admin
@@ -114,10 +106,10 @@ export async function handleMessage(sock, m, commands) {
       try {
         await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } })
         
-        // Extended payload support for flexible command structure
         const fullText = text.slice(prefix.length + cmdName.length).trim()
         const botNumber = sock.user?.id ? sock.user.id.split(':')[0].replace(/\D/g, '') : ''
 
+        // Dual pattern execution support
         await command.execute(sock, m, args, { 
           isOwner, 
           isGroup, 
@@ -128,6 +120,8 @@ export async function handleMessage(sock, m, commands) {
           prefix, 
           cmdName, 
           fullText 
+        }).catch(async () => {
+            await command.execute(m, sock, args, fullText, { isOwner, isGroup, jid, sender })
         })
         
         await sock.sendMessage(jid, { react: { text: '✅', key: m.key } })
@@ -158,7 +152,6 @@ export async function handleGroupParticipants(sock, update) {
     try {
       groupMetadata = await sock.groupMetadata(id)
     } catch (e) {
-      console.error("Failed to fetch group metadata:", e)
       return
     }
 
@@ -168,20 +161,8 @@ export async function handleGroupParticipants(sock, update) {
     for (const jid of participants) {
       const userNum = jid.split('@')[0]
 
-      // 🎉 Welcome Event
       if (action === 'add') {
-        let welcomeText = `
-✨ ━━━━━━━⟨ 🥳 *𝑾𝑬𝑳𝑪𝑶𝑴𝑬* 🥳 ⟩━━━━━━━ ✨
-
-👋 *Hello* @${userNum}!
-🎉 Welcome to *${groupName}*!
-
-╭━━━〔 🟡 *𝐺𝑅𝑶𝑈𝑃 𝐼𝑁𝐹𝑂* 🟡 〕━━━⬣
-┃ 👥 *Total Members* : ${totalMembers}
-┃ 🤖 *Bot System*    : ${botName}
-╰━━━━━━━━━━━━━━━━━━━━━━━━⬣
-
-> 💛 *Please follow group rules and enjoy your stay!*`
+        let welcomeText = `✨ ━━━━━━━⟨ 🥳 *𝑾𝑬𝑳𝑪𝑶𝑴𝑬* 🥳 ⟩━━━━━━━ ✨\n\n👋 *Hello* @${userNum}!\n🎉 Welcome to *${groupName}*!\n\n╭━━━〔 🟡 *𝐺𝑅𝑶𝑈𝑃 𝐼𝑁𝐹𝑂* 🟡 〕━━━⬣\n┃ 👥 *Total Members* : ${totalMembers}\n┃ 🤖 *Bot System*    : ${botName}\n╰━━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n> 💛 *Please follow group rules and enjoy your stay!*`
 
         await sock.sendMessage(id, {
           text: welcomeText,
@@ -199,20 +180,8 @@ export async function handleGroupParticipants(sock, update) {
         })
       }
 
-      // 💔 Goodbye Event
       if (action === 'remove') {
-        let goodbyeText = `
-✨ ━━━━━━━⟨ 💔 *𝐺𝑂𝑂𝐷𝐵𝑌𝐸* 💔 ⟩━━━━━━━ ✨
-
-👋 Goodbye @${userNum}!
-We are sad to see you leave *${groupName}*.
-
-╭━━━〔 🟡 *𝐺𝑅𝑶𝑈𝑃 𝑆𝑇𝐴𝑇𝑆* 🟡 〕━━━⬣
-┃ 👥 *Remaining Members* : ${totalMembers}
-┃ 🤖 *Bot System*        : ${botName}
-╰━━━━━━━━━━━━━━━━━━━━━━━━⬣
-
-> 💛 *We wish you all the best!*`
+        let goodbyeText = `✨ ━━━━━━━⟨ 💔 *𝐺𝑂𝑂𝐷𝐵𝑌𝐸* 💔 ⟩━━━━━━━ ✨\n\n👋 Goodbye @${userNum}!\nWe are sad to see you leave *${groupName}*.\n\n╭━━━〔 🟡 *𝐺𝑅𝑶𝑈𝑃 𝑆𝑇𝐴𝑇𝑆* 🟡 〕━━━⬣\n┃ 👥 *Remaining Members* : ${totalMembers}\n┃ 🤖 *Bot System*        : ${botName}\n╰━━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n> 💛 *We wish you all the best!*`
 
         await sock.sendMessage(id, {
           text: goodbyeText,
