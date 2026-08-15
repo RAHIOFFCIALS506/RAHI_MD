@@ -3,18 +3,39 @@ import { getSetting } from './settings.js'
 const spamTracker = new Map()
 
 /**
- * ১. মেসেজ ও ফিচার হ্যান্ডলার (Message Handler)
+ * 1. Main Message & Feature Handler (Merged: Anti-Features + Owner Guard + Command Engine)
  */
 export async function handleMessage(sock, m, commands) {
   try {
-    if (!m.message) return
+    if (!m || !m.message) return
 
     const jid = m.key.remoteJid
-    const sender = m.key.participant || jid
+    const isGroup = jid.endsWith('@g.us')
     const now = Date.now()
 
-    // ১. অ্যান্টি-স্প্যাম (Anti-Spam)
-    if (global.antispam) {
+    // 👤 Sender and User Number Extraction
+    const participant = isGroup ? (m.key.participant || m.participant) : jid
+    const sender = participant || jid
+    const userNumber = sender ? sender.split('@')[0].replace(/\D/g, '') : ''
+
+    // 👑 Config Owner Number Extraction
+    const rawOwner = getSetting('owner.number') || '8801711209381'
+    const ownerNumbers = Array.isArray(rawOwner) 
+        ? rawOwner.map(num => String(num).replace(/\D/g, '8801711209381'))
+        : [String(rawOwner).replace(/\D/g, '8801711209381')]
+
+    // Check if the sender is an owner
+    const isOwner = m.key.fromMe || ownerNumbers.includes(userNumber)
+
+    // 📝 Extract Message Text (Normal text, extended context, captions)
+    const text = m.message?.conversation || 
+                 m.message?.extendedTextMessage?.text || 
+                 m.message?.imageMessage?.caption || 
+                 m.message?.videoMessage?.caption || 
+                 m.message?.documentMessage?.caption || ""
+
+    // ─── 🛡️ 1. Anti-Spam System ───
+    if (global.antispam && !isOwner) {
       let history = spamTracker.get(sender) || []
       history = history.filter(time => now - time < 5000)
       history.push(now)
@@ -22,63 +43,58 @@ export async function handleMessage(sock, m, commands) {
 
       if (history.length > 5) {
         await sock.sendMessage(jid, { 
-          text: "⚠️ *Stop spamming!* You are sending messages too fast." 
+          text: "⚠️ *Stop spamming!* Please slow down your messages." 
         }, { quoted: m })
-        
         spamTracker.set(sender, [])
         return
       }
     }
 
-    // ২. অ্যান্টি-স্টিকার (Anti-Sticker)
-    if (global.antisticker) {
-      const isSticker = m.message.stickerMessage || 
-                        (m.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage)
-
+    // ─── 🖼️ 2. Anti-Sticker System ───
+    if (global.antisticker && isGroup && !isOwner) {
+      const isSticker = m.message?.stickerMessage
       if (isSticker) {
-        await sock.sendMessage(jid, { 
-          delete: { 
-            remoteJid: jid, 
-            fromMe: false, 
-            id: m.key.id, 
-            participant: m.key.participant 
-          } 
-        }).catch(() => {})
-        
-        await sock.sendMessage(jid, { text: "❌ *Stickers are not allowed here!*" })
+        await sock.sendMessage(jid, { delete: m.key }).catch(() => {})
         return
       }
     }
 
-    // ৩. অ্যান্টি-লিংক (Anti-Link)
-    // ৩. অ্যান্টি-লিংক ও অটো-কিক লজিক (Anti-Link Logic)
-  const text = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || ""
-  const isGroup = jid.endsWith('@g.us')
+    // ─── 🔗 3. Anti-Link & Auto-Kick System ───
+    if (isGroup && global.antilinkMode && global.antilinkMode[jid] && global.antilinkMode[jid] !== 'off' && !m.key.fromMe) {
+      const linkRegex = /(https?:\/\/)?(chat\.whatsapp\.com|wa\.me|whatsapp\.com\/channel)\/([a-zA-Z0-9]+)/gi
+      
+      if (linkRegex.test(text)) {
+        try {
+          const groupMetadata = await sock.groupMetadata(jid)
+          const senderAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin
 
-  if (isGroup && global.antilinkMode && global.antilinkMode[jid] && global.antilinkMode[jid] !== 'off' && !m.key.fromMe) {
-    const linkRegex = /(https?:\/\/)?(chat\.whatsapp\.com|wa\.me)\/([a-zA-Z0-9]+)/gi
-    if (linkRegex.test(text)) {
-      // ১. মেসেজ ডিলেট করা
-      await sock.sendMessage(jid, { delete: m.key }).catch(() => {})
+          // Skip if sender is a Group Admin or Owner
+          if (!senderAdmin && !isOwner) {
+            // Delete Link Message
+            await sock.sendMessage(jid, { delete: m.key }).catch(() => {})
 
-      // ২. মোড যদি Kick হয় তবে ইউজারকে কিক করা
-      if (global.antilinkMode[jid] === 'kick') {
-        const groupMetadata = await sock.groupMetadata(jid)
-        const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-        const botAdmin = groupMetadata.participants.find(p => p.id === botJid)?.admin
+            // Kick action if set to 'kick' mode
+            if (global.antilinkMode[jid] === 'kick') {
+              const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : ''
+              const botAdmin = groupMetadata.participants.find(p => p.id === botJid)?.admin
 
-        if (botAdmin) {
-          await sock.groupParticipantsUpdate(jid, [sender], 'remove').catch(() => {})
-          await sock.sendMessage(jid, { 
-            text: `🚫 @${sender.split('@')[0]} was kicked for sending links!`, 
-            mentions: [sender] 
-          })
+              if (botAdmin) {
+                await sock.groupParticipantsUpdate(jid, [sender], 'remove').catch(() => {})
+                await sock.sendMessage(jid, { 
+                  text: `🚫 @${sender.split('@')[0]} was kicked for sending links!`, 
+                  mentions: [sender] 
+                })
+              }
+            }
+            return
+          }
+        } catch (e) {
+          console.error("AntiLink Error:", e)
         }
       }
-      return
     }
-                                   }
-    // ৪. কমান্ড হ্যান্ডলার (Command Executer)
+
+    // ─── ⚡ 4. Command Executer Engine ───
     const prefix = getSetting('bot.prefix') || '.'
     if (!text.startsWith(prefix)) return
 
@@ -87,22 +103,48 @@ export async function handleMessage(sock, m, commands) {
     const command = commands.get(cmdName)
 
     if (command) {
+      // 👑 OWNER ONLY GUARD
+      if (command.info?.ownerOnly && !isOwner) {
+        await sock.sendMessage(jid, { 
+          text: '❌ *Access Denied!* এই কমান্ডটি শুধুমাত্র বটের Owner ব্যবহার করতে পারবেন।' 
+        }, { quoted: m })
+        return
+      }
+
       try {
         await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } })
-        await command.execute(m, sock, args, text.slice(prefix.length + cmdName.length).trim(), { jid, sender })
+        
+        // Extended payload support for flexible command structure
+        const fullText = text.slice(prefix.length + cmdName.length).trim()
+        const botNumber = sock.user?.id ? sock.user.id.split(':')[0].replace(/\D/g, '') : ''
+
+        await command.execute(sock, m, args, { 
+          isOwner, 
+          isGroup, 
+          jid, 
+          sender, 
+          userNumber, 
+          botNumber, 
+          prefix, 
+          cmdName, 
+          fullText 
+        })
+        
         await sock.sendMessage(jid, { react: { text: '✅', key: m.key } })
       } catch (e) {
-        console.error(`Error executing command ${cmdName}:`, e)
+        console.error(`Error executing command [${cmdName}]:`, e)
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } })
+        await sock.sendMessage(jid, { text: `❌ *Command Error:* ${e.message}` }, { quoted: m })
       }
     }
+
   } catch (err) {
-    console.error("Handle Message Error:", err)
+    console.error("Handle Message Critical Error:", err)
   }
 }
 
 /**
- * ২. গ্রুপ ওয়েলকাম ও গুডবাই হ্যান্ডলার (Welcome & Goodbye Handler)
+ * 2. Group Participants Handler (Welcome & Goodbye Card)
  */
 export async function handleGroupParticipants(sock, update) {
   try {
@@ -112,7 +154,6 @@ export async function handleGroupParticipants(sock, update) {
     const botName = getSetting('bot.name') || '𝑹𝑨𝑯𝑰_𝑴𝑫'
     const menuPic = getSetting('bot.image') || 'https://i.postimg.cc/05p6KqCc/1768548671157.jpg'
 
-    // গ্রুপ মেটাডেটা সেফলি ফেচ করা
     let groupMetadata
     try {
       groupMetadata = await sock.groupMetadata(id)
@@ -127,7 +168,7 @@ export async function handleGroupParticipants(sock, update) {
     for (const jid of participants) {
       const userNum = jid.split('@')[0]
 
-      // ১. নতুন মেম্বার জয়েন করলে (Welcome)
+      // 🎉 Welcome Event
       if (action === 'add') {
         let welcomeText = `
 ✨ ━━━━━━━⟨ 🥳 *𝑾𝑬𝑳𝑪𝑶𝑴𝑬* 🥳 ⟩━━━━━━━ ✨
@@ -140,15 +181,15 @@ export async function handleGroupParticipants(sock, update) {
 ┃ 🤖 *Bot System*    : ${botName}
 ╰━━━━━━━━━━━━━━━━━━━━━━━━⬣
 
-> 💛 *Please make sure to read the group description and enjoy your stay!*`
+> 💛 *Please follow group rules and enjoy your stay!*`
 
         await sock.sendMessage(id, {
           text: welcomeText,
           mentions: [jid],
           contextInfo: {
             externalAdReply: {
-              title: `🎉 WELCOME TO ${groupName.toUpperCase()} 🎉`,
-              body: `You are member #${totalMembers}`,
+              title: `🎉 WELCOME TO ${groupName.toUpperCase()}`,
+              body: `Member #${totalMembers}`,
               thumbnailUrl: menuPic,
               sourceUrl: "https://whatsapp.com",
               mediaType: 1,
@@ -158,7 +199,7 @@ export async function handleGroupParticipants(sock, update) {
         })
       }
 
-      // ২. মেম্বার কিক খেলে বা লিভ নিলে (Goodbye / Left)
+      // 💔 Goodbye Event
       if (action === 'remove') {
         let goodbyeText = `
 ✨ ━━━━━━━⟨ 💔 *𝐺𝑂𝑂𝐷𝐵𝑌𝐸* 💔 ⟩━━━━━━━ ✨
@@ -171,7 +212,7 @@ We are sad to see you leave *${groupName}*.
 ┃ 🤖 *Bot System*        : ${botName}
 ╰━━━━━━━━━━━━━━━━━━━━━━━━⬣
 
-> 💛 *We wish you all the best for the future!*`
+> 💛 *We wish you all the best!*`
 
         await sock.sendMessage(id, {
           text: goodbyeText,
@@ -192,4 +233,4 @@ We are sad to see you leave *${groupName}*.
   } catch (error) {
     console.error("Group Participants Event Error:", error)
   }
-    }
+      }
